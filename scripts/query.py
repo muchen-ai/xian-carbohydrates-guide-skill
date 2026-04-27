@@ -18,6 +18,8 @@ ROOT = Path(__file__).resolve().parents[1]
 STORE_DATA_PATH = ROOT / "data" / "stores.json"
 KNOWLEDGE_DATA_PATH = ROOT / "data" / "knowledge.json"
 TAXONOMY_DATA_PATH = ROOT / "data" / "taxonomy.json"
+COMMUNITY_SUBMISSIONS_PATH = ROOT / "data" / "community_submissions.json"
+COMMUNITY_COMMENTS_PATH = ROOT / "data" / "community_comments.json"
 DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 DAY_LABELS = {
     "mon": "周一",
@@ -49,9 +51,24 @@ def load_knowledge() -> list[dict[str, Any]]:
     return load_json_array(KNOWLEDGE_DATA_PATH)
 
 
+def load_community_submissions() -> list[dict[str, Any]]:
+    return load_json_array(COMMUNITY_SUBMISSIONS_PATH)
+
+
+def load_community_comments() -> list[dict[str, Any]]:
+    return load_json_array(COMMUNITY_COMMENTS_PATH)
+
+
 @lru_cache(maxsize=1)
 def load_taxonomy() -> tuple[dict[str, Any], ...]:
     return tuple(load_json_array(TAXONOMY_DATA_PATH))
+
+
+def save_json_array(path: Path, items: list[dict[str, Any]]) -> None:
+    path.write_text(
+        json.dumps(items, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def normalize(text: Any) -> str:
@@ -70,6 +87,19 @@ def ensure_list(value: Any) -> list[str]:
         parts = re.split(r"[,，、/|;；]+", value)
         return [part.strip() for part in parts if part.strip()]
     return [str(value).strip()]
+
+
+def current_timestamp() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def build_local_id(prefix: str, items: list[dict[str, Any]]) -> str:
+    stamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    return f"{prefix}_{stamp}_{len(items) + 1:03d}"
+
+
+def default_author_name(lang: str) -> str:
+    return "Anonymous User" if lang == "en" else "匿名用户"
 
 
 @lru_cache(maxsize=1)
@@ -291,6 +321,17 @@ def localized_knowledge_value(item: dict[str, Any], key: str, lang: str) -> Any:
     return item.get(key)
 
 
+def localized_submission_value(item: dict[str, Any], key: str, lang: str) -> Any:
+    if lang == "en":
+        value = item.get(f"{key}_en")
+        if isinstance(value, str) and value.strip():
+            return value
+    value = item.get(f"{key}_zh")
+    if isinstance(value, str) and value.strip():
+        return value
+    return item.get(key)
+
+
 def localized_display_name(store: dict[str, Any], lang: str) -> str:
     if lang == "en":
         brand = str(store.get("brand_name_en", "")).strip()
@@ -300,6 +341,14 @@ def localized_display_name(store: dict[str, Any], lang: str) -> str:
         if brand:
             return brand
     return display_name(store)
+
+
+def submission_display_name(item: dict[str, Any]) -> str:
+    brand = str(item.get("brand_name", "")).strip()
+    branch = str(item.get("branch_name", "")).strip()
+    if brand and branch:
+        return f"{brand} {branch}"
+    return brand or branch or str(item.get("submission_id", "")).strip()
 
 
 def localized_category_name(category_id: Any, lang: str) -> str:
@@ -566,13 +615,25 @@ def detail_store(args: argparse.Namespace) -> dict[str, Any]:
     now = datetime.fromisoformat(args.at) if args.at else datetime.now()
     for store in stores:
         if str(store.get("store_id")) == args.store_id:
-            return enrich_store(
+            payload = enrich_store(
                 store,
                 now=now,
                 near_lat=args.near_lat,
                 near_lng=args.near_lng,
                 lang=args.lang,
             )
+            if getattr(args, "include_comments", False):
+                comment_items = [
+                    enrich_comment(item, args.lang)
+                    for item in load_community_comments()
+                    if str(item.get("target_type", "")).strip() == "store"
+                    and str(item.get("target_id", "")).strip() == args.store_id
+                    and str(item.get("status", "")).strip() == "visible"
+                ]
+                comment_items.sort(key=lambda item: str(item.get("created_at", "")), reverse=True)
+                payload["community_comments"] = comment_items[: args.comments_limit]
+                payload["community_comments_count"] = len(comment_items)
+            return payload
     return {"error": f"store_id not found: {args.store_id}"}
 
 
@@ -587,6 +648,50 @@ def enrich_knowledge(item: dict[str, Any], lang: str) -> dict[str, Any]:
     enriched["keywords_localized"] = ensure_list(
         localized_knowledge_value(item, "keywords", lang)
     )
+    return enriched
+
+
+def enrich_submission(item: dict[str, Any], lang: str) -> dict[str, Any]:
+    enriched = dict(item)
+    enriched["display_name"] = submission_display_name(item)
+    enriched["display_name_localized"] = submission_display_name(item)
+    enriched["category_name_localized"] = localized_category_name(
+        item.get("primary_category_id"), lang
+    )
+    if lang == "en" and ensure_list(item.get("dish_types_en")):
+        enriched["dish_types_localized"] = ensure_list(item.get("dish_types_en"))
+    else:
+        enriched["dish_types_localized"] = ensure_list(item.get("dish_types"))
+    enriched["recommended_reason_localized"] = str(
+        localized_submission_value(item, "recommended_reason", lang) or ""
+    )
+    enriched["submitter_note_localized"] = str(
+        localized_submission_value(item, "submitter_note", lang) or ""
+    )
+    return enriched
+
+
+def resolve_comment_target(item: dict[str, Any], lang: str) -> str:
+    target_type = str(item.get("target_type", "")).strip()
+    target_id = str(item.get("target_id", "")).strip()
+    if target_type == "store":
+        for store in load_stores():
+            if str(store.get("store_id", "")).strip() == target_id:
+                return localized_display_name(store, lang)
+    if target_type == "submission":
+        for submission in load_community_submissions():
+            if str(submission.get("submission_id", "")).strip() == target_id:
+                return submission_display_name(submission)
+    return target_id
+
+
+def enrich_comment(item: dict[str, Any], lang: str) -> dict[str, Any]:
+    enriched = dict(item)
+    if lang == "en" and str(item.get("comment_en", "")).strip():
+        enriched["comment_localized"] = str(item.get("comment_en", "")).strip()
+    else:
+        enriched["comment_localized"] = str(item.get("comment_zh", "")).strip()
+    enriched["target_name_localized"] = resolve_comment_target(item, lang)
     return enriched
 
 
@@ -688,6 +793,208 @@ def detail_knowledge(args: argparse.Namespace) -> dict[str, Any]:
     return {"error": f"entry_id not found: {args.entry_id}"}
 
 
+def resolve_single_category_id(value: str) -> str:
+    category_ids = resolve_category_ids([value])
+    if not category_ids:
+        raise ValueError(f"unknown category: {value}")
+    if len(category_ids) > 1:
+        raise ValueError(f"ambiguous category: {value}")
+    return category_ids[0]
+
+
+def target_identity_from_args(args: argparse.Namespace) -> tuple[str, str]:
+    store_id = str(getattr(args, "store_id", "") or "").strip()
+    submission_id = str(getattr(args, "submission_id", "") or "").strip()
+    if bool(store_id) == bool(submission_id):
+        raise ValueError("provide exactly one of --store-id or --submission-id")
+    if store_id:
+        if not any(str(item.get("store_id", "")).strip() == store_id for item in load_stores()):
+            raise ValueError(f"store_id not found: {store_id}")
+        return "store", store_id
+    if not any(
+        str(item.get("submission_id", "")).strip() == submission_id
+        for item in load_community_submissions()
+    ):
+        raise ValueError(f"submission_id not found: {submission_id}")
+    return "submission", submission_id
+
+
+def collect_submission_blob(item: dict[str, Any]) -> str:
+    fields: list[str] = [
+        item.get("submission_id", ""),
+        item.get("status", ""),
+        item.get("brand_name", ""),
+        item.get("branch_name", ""),
+        item.get("district", ""),
+        item.get("area", ""),
+        item.get("address", ""),
+        item.get("primary_category_id", ""),
+        item.get("recommended_reason_zh", ""),
+        item.get("recommended_reason_en", ""),
+        item.get("submitter_name", ""),
+        item.get("submitter_note_zh", ""),
+        item.get("submitter_note_en", ""),
+    ]
+    for key in ("dish_types", "dish_types_en"):
+        fields.extend(ensure_list(item.get(key)))
+    return normalize(" ".join(str(field) for field in fields))
+
+
+def suggest_store(args: argparse.Namespace) -> dict[str, Any]:
+    if not any([args.reason_zh, args.reason_en, args.note_zh, args.note_en]):
+        raise ValueError("at least one of reason or note is required")
+    category_id = resolve_single_category_id(args.category)
+    items = load_community_submissions()
+    created_at = current_timestamp()
+    submitter_name = args.submitter_name.strip() or default_author_name(args.lang)
+    submission = {
+        "submission_id": build_local_id("submission", items),
+        "status": "pending",
+        "brand_name": args.brand_name.strip(),
+        "branch_name": args.branch_name.strip(),
+        "district": args.district.strip(),
+        "area": args.area.strip(),
+        "address": args.address.strip(),
+        "primary_category_id": category_id,
+        "dish_types": ensure_list(args.dish),
+        "dish_types_en": ensure_list(args.dish_en),
+        "recommended_reason_zh": args.reason_zh.strip(),
+        "recommended_reason_en": args.reason_en.strip(),
+        "submitter_name": submitter_name,
+        "submitter_note_zh": args.note_zh.strip(),
+        "submitter_note_en": args.note_en.strip(),
+        "source_url": args.source_url.strip(),
+        "created_at": created_at,
+        "updated_at": created_at,
+        "scope": "local_installation",
+    }
+    items.append(submission)
+    save_json_array(COMMUNITY_SUBMISSIONS_PATH, items)
+    payload = enrich_submission(submission, args.lang)
+    payload["message"] = (
+        "已记录这条用户推荐，当前状态为 pending。注意：这条提交只保存在当前安装副本里。"
+        if args.lang == "zh"
+        else "Saved this community suggestion with pending status. Note: it is stored only in this local installation."
+    )
+    return payload
+
+
+def list_suggestions(args: argparse.Namespace) -> dict[str, Any]:
+    items = load_community_submissions()
+    query_blob = normalize(args.query)
+    explicit_category_ids = resolve_category_ids(args.category)
+    results: list[dict[str, Any]] = []
+
+    for item in items:
+        score = 0
+        searchable = collect_submission_blob(item)
+        if query_blob:
+            if query_blob not in searchable:
+                continue
+            score += 10
+        if args.status:
+            if normalize(item.get("status")) != normalize(args.status):
+                continue
+            score += 2
+        if explicit_category_ids:
+            if str(item.get("primary_category_id", "")).strip() not in explicit_category_ids:
+                continue
+            score += 4
+        if args.district:
+            district_values = normalized_values(item.get("district"))
+            if normalize(args.district) not in district_values:
+                continue
+            score += 3
+        if args.area:
+            area_values = normalized_values(item.get("area"), item.get("address"))
+            if normalize(args.area) not in area_values:
+                continue
+            score += 3
+        enriched = enrich_submission(item, args.lang)
+        enriched["_score"] = score
+        results.append(enriched)
+
+    results.sort(key=lambda item: str(item.get("created_at", "")), reverse=True)
+    results.sort(key=lambda item: item.get("_score", 0), reverse=True)
+    limited = results[: args.limit]
+    for item in limited:
+        item.pop("_score", None)
+
+    return {
+        "query": {
+            "query": args.query,
+            "status": args.status,
+            "district": args.district,
+            "area": args.area,
+            "category": args.category,
+            "lang": args.lang,
+        },
+        "count": len(limited),
+        "total_matches": len(results),
+        "results": limited,
+    }
+
+
+def comment_store(args: argparse.Namespace) -> dict[str, Any]:
+    target_type, target_id = target_identity_from_args(args)
+    if not (args.comment_zh.strip() or args.comment_en.strip()):
+        raise ValueError("at least one of --comment-zh or --comment-en is required")
+    if args.rating is not None and not 1 <= args.rating <= 5:
+        raise ValueError("rating must be between 1 and 5")
+
+    items = load_community_comments()
+    created_at = current_timestamp()
+    author_name = args.author_name.strip() or default_author_name(args.lang)
+    comment = {
+        "comment_id": build_local_id("comment", items),
+        "target_type": target_type,
+        "target_id": target_id,
+        "status": "visible",
+        "author_name": author_name,
+        "comment_zh": args.comment_zh.strip(),
+        "comment_en": args.comment_en.strip(),
+        "rating": args.rating,
+        "tags": ensure_list(args.tag),
+        "created_at": created_at,
+        "updated_at": created_at,
+        "scope": "local_installation",
+    }
+    items.append(comment)
+    save_json_array(COMMUNITY_COMMENTS_PATH, items)
+    payload = enrich_comment(comment, args.lang)
+    payload["message"] = (
+        "已记录这条评论，当前仅保存在当前安装副本里。"
+        if args.lang == "zh"
+        else "Saved this comment. It is currently stored only in this local installation."
+    )
+    return payload
+
+
+def list_comments(args: argparse.Namespace) -> dict[str, Any]:
+    target_type, target_id = target_identity_from_args(args)
+    items = load_community_comments()
+    results = [
+        enrich_comment(item, args.lang)
+        for item in items
+        if str(item.get("target_type", "")).strip() == target_type
+        and str(item.get("target_id", "")).strip() == target_id
+        and (not args.status or normalize(item.get("status")) == normalize(args.status))
+    ]
+    results.sort(key=lambda item: str(item.get("created_at", "")), reverse=True)
+    limited = results[: args.limit]
+    return {
+        "query": {
+            "target_type": target_type,
+            "target_id": target_id,
+            "status": args.status,
+            "lang": args.lang,
+        },
+        "count": len(limited),
+        "total_matches": len(results),
+        "results": limited,
+    }
+
+
 def render_text(payload: dict[str, Any]) -> str:
     if "results" in payload:
         lines = [
@@ -725,6 +1032,34 @@ def render_text(payload: dict[str, Any]) -> str:
                 lines.append(f"  wifi_policy: {store.get('wifi_policy', 'unknown')}")
                 if "distance_km" in store:
                     lines.append(f"  distance_km: {store.get('distance_km')}")
+            elif "submission_id" in store:
+                lines.append(f"- {store.get('display_name_localized', store.get('display_name', ''))}")
+                lines.append(f"  submission_id: {store.get('submission_id', '')}")
+                lines.append(f"  status: {store.get('status', '')}")
+                lines.append(f"  category: {store.get('category_name_localized', '')}")
+                lines.append(f"  area: {store.get('district', '')} / {store.get('area', '')}")
+                lines.append(f"  address: {store.get('address', '')}")
+                lines.append(
+                    f"  dish_types: {', '.join(ensure_list(store.get('dish_types_localized')))}"
+                )
+                lines.append(
+                    f"  recommended_reason: {store.get('recommended_reason_localized', '')}"
+                )
+                lines.append(f"  submitter_name: {store.get('submitter_name', '')}")
+                lines.append(f"  note: {store.get('submitter_note_localized', '')}")
+                lines.append(f"  created_at: {store.get('created_at', '')}")
+            elif "comment_id" in store:
+                lines.append(f"- {store.get('author_name', '')}")
+                lines.append(f"  comment_id: {store.get('comment_id', '')}")
+                lines.append(f"  target_type: {store.get('target_type', '')}")
+                lines.append(f"  target_id: {store.get('target_id', '')}")
+                lines.append(
+                    f"  target_name: {store.get('target_name_localized', store.get('target_id', ''))}"
+                )
+                lines.append(f"  rating: {store.get('rating', '')}")
+                lines.append(f"  tags: {', '.join(ensure_list(store.get('tags')))}")
+                lines.append(f"  comment: {store.get('comment_localized', '')}")
+                lines.append(f"  created_at: {store.get('created_at', '')}")
             else:
                 lines.append(f"- {store.get('entry_id', '')}")
                 lines.append(f"  category: {store.get('category_name_localized', '')}")
@@ -755,6 +1090,41 @@ def render_text(payload: dict[str, Any]) -> str:
             ]
         )
 
+    if "submission_id" in payload:
+        return "\n".join(
+            [
+                str(payload.get("message", "")).strip(),
+                f"submission_id: {payload.get('submission_id', '')}",
+                f"display_name: {payload.get('display_name_localized', payload.get('display_name', ''))}",
+                f"status: {payload.get('status', '')}",
+                f"category: {payload.get('category_name_localized', '')}",
+                f"district: {payload.get('district', '')}",
+                f"area: {payload.get('area', '')}",
+                f"address: {payload.get('address', '')}",
+                f"dish_types: {', '.join(ensure_list(payload.get('dish_types_localized')))}",
+                f"recommended_reason: {payload.get('recommended_reason_localized', '')}",
+                f"submitter_name: {payload.get('submitter_name', '')}",
+                f"note: {payload.get('submitter_note_localized', '')}",
+                f"created_at: {payload.get('created_at', '')}",
+            ]
+        )
+
+    if "comment_id" in payload:
+        return "\n".join(
+            [
+                str(payload.get("message", "")).strip(),
+                f"comment_id: {payload.get('comment_id', '')}",
+                f"author_name: {payload.get('author_name', '')}",
+                f"target_type: {payload.get('target_type', '')}",
+                f"target_id: {payload.get('target_id', '')}",
+                f"target_name: {payload.get('target_name_localized', payload.get('target_id', ''))}",
+                f"rating: {payload.get('rating', '')}",
+                f"tags: {', '.join(ensure_list(payload.get('tags')))}",
+                f"comment: {payload.get('comment_localized', '')}",
+                f"created_at: {payload.get('created_at', '')}",
+            ]
+        )
+
     lines = [
         f"display_name: {payload.get('display_name_localized', payload.get('display_name', ''))}",
         f"store_id: {payload.get('store_id', '')}",
@@ -779,6 +1149,14 @@ def render_text(payload: dict[str, Any]) -> str:
     ]
     if "distance_km" in payload:
         lines.append(f"distance_km: {payload.get('distance_km')}")
+    if "community_comments_count" in payload:
+        lines.append(f"community_comments_count: {payload.get('community_comments_count')}")
+        for index, comment in enumerate(payload.get("community_comments", []), start=1):
+            author = str(comment.get("author_name", "")).strip()
+            text = str(comment.get("comment_localized", "")).strip()
+            rating = comment.get("rating")
+            suffix = f" ({rating}/5)" if rating else ""
+            lines.append(f"community_comment_{index}: {author}{suffix} - {text}")
     return "\n".join(lines)
 
 
@@ -810,6 +1188,8 @@ def build_parser() -> argparse.ArgumentParser:
     detail.add_argument("--near-lat", type=float, default=None, help="User latitude")
     detail.add_argument("--near-lng", type=float, default=None, help="User longitude")
     detail.add_argument("--at", default="", help="Datetime override in ISO format")
+    detail.add_argument("--include-comments", action="store_true", help="Include community comments")
+    detail.add_argument("--comments-limit", type=int, default=3, help="Community comments limit")
     detail.add_argument("--lang", choices=["zh", "en"], default="zh")
     detail.add_argument("--format", choices=["json", "text"], default="json")
 
@@ -827,6 +1207,61 @@ def build_parser() -> argparse.ArgumentParser:
     knowledge_detail.add_argument("--lang", choices=["zh", "en"], default="zh")
     knowledge_detail.add_argument("--format", choices=["json", "text"], default="json")
 
+    suggest_store_parser = subparsers.add_parser(
+        "suggest-store", help="Submit a community store suggestion"
+    )
+    suggest_store_parser.add_argument("--brand-name", required=True, help="Brand or store name")
+    suggest_store_parser.add_argument("--branch-name", default="", help="Branch name")
+    suggest_store_parser.add_argument("--district", required=True, help="District")
+    suggest_store_parser.add_argument("--area", required=True, help="Area or neighborhood")
+    suggest_store_parser.add_argument("--address", required=True, help="Address")
+    suggest_store_parser.add_argument("--category", required=True, help="Primary category")
+    suggest_store_parser.add_argument("--dish", action="append", required=True, help="Dish type")
+    suggest_store_parser.add_argument("--dish-en", action="append", default=[], help="Dish type in English")
+    suggest_store_parser.add_argument("--submitter-name", default="", help="Submitter name")
+    suggest_store_parser.add_argument("--reason-zh", default="", help="Recommendation reason in Chinese")
+    suggest_store_parser.add_argument("--reason-en", default="", help="Recommendation reason in English")
+    suggest_store_parser.add_argument("--note-zh", default="", help="Submitter note in Chinese")
+    suggest_store_parser.add_argument("--note-en", default="", help="Submitter note in English")
+    suggest_store_parser.add_argument("--source-url", default="", help="Optional source URL")
+    suggest_store_parser.add_argument("--lang", choices=["zh", "en"], default="zh")
+    suggest_store_parser.add_argument("--format", choices=["json", "text"], default="json")
+
+    list_suggestions_parser = subparsers.add_parser(
+        "list-suggestions", help="List community store suggestions"
+    )
+    list_suggestions_parser.add_argument("--query", default="", help="Free-text keyword search")
+    list_suggestions_parser.add_argument("--status", default="", help="pending/approved/rejected")
+    list_suggestions_parser.add_argument("--district", default="", help="District filter")
+    list_suggestions_parser.add_argument("--area", default="", help="Area filter")
+    list_suggestions_parser.add_argument("--category", action="append", default=[], help="Category filter")
+    list_suggestions_parser.add_argument("--limit", type=int, default=10, help="Result limit")
+    list_suggestions_parser.add_argument("--lang", choices=["zh", "en"], default="zh")
+    list_suggestions_parser.add_argument("--format", choices=["json", "text"], default="json")
+
+    comment_store_parser = subparsers.add_parser(
+        "comment-store", help="Add a community comment to a store or submission"
+    )
+    comment_store_parser.add_argument("--store-id", default="", help="Target store id")
+    comment_store_parser.add_argument("--submission-id", default="", help="Target submission id")
+    comment_store_parser.add_argument("--author-name", default="", help="Comment author name")
+    comment_store_parser.add_argument("--comment-zh", default="", help="Comment in Chinese")
+    comment_store_parser.add_argument("--comment-en", default="", help="Comment in English")
+    comment_store_parser.add_argument("--rating", type=int, default=None, help="Optional rating 1-5")
+    comment_store_parser.add_argument("--tag", action="append", default=[], help="Comment tag")
+    comment_store_parser.add_argument("--lang", choices=["zh", "en"], default="zh")
+    comment_store_parser.add_argument("--format", choices=["json", "text"], default="json")
+
+    list_comments_parser = subparsers.add_parser(
+        "list-comments", help="List community comments for a store or submission"
+    )
+    list_comments_parser.add_argument("--store-id", default="", help="Target store id")
+    list_comments_parser.add_argument("--submission-id", default="", help="Target submission id")
+    list_comments_parser.add_argument("--status", default="visible", help="visible/hidden")
+    list_comments_parser.add_argument("--limit", type=int, default=10, help="Result limit")
+    list_comments_parser.add_argument("--lang", choices=["zh", "en"], default="zh")
+    list_comments_parser.add_argument("--format", choices=["json", "text"], default="json")
+
     return parser
 
 
@@ -843,6 +1278,14 @@ def main() -> int:
             payload = search_knowledge(args)
         elif args.command == "knowledge-detail":
             payload = detail_knowledge(args)
+        elif args.command == "suggest-store":
+            payload = suggest_store(args)
+        elif args.command == "list-suggestions":
+            payload = list_suggestions(args)
+        elif args.command == "comment-store":
+            payload = comment_store(args)
+        elif args.command == "list-comments":
+            payload = list_comments(args)
         else:
             parser.error(f"Unsupported command: {args.command}")
             return 2

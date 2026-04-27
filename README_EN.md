@@ -37,25 +37,8 @@ I wanted this project to be more than a restaurant list. It should feel more lik
 - Bilingual support: works for both Chinese and English queries
 - Searchable store data: search by area, landmark, dish, delivery, Wi-Fi, and more
 - Food knowledge Q&A: not just where to eat, but also origin stories, craft, differences, and eating tips
+- Community add-ons: users can locally submit favorite spots and attach their own comments
 - Ongoing refinement: the dataset will continue to be expanded and corrected
-
-## Data Snapshot
-
-The current repository includes:
-
-- `218` stores
-- `4` knowledge entries
-- `7` food categories
-
-| Category | Count |
-|---|---:|
-| Noodles | 81 |
-| Mo, Flatbreads, and Paomo | 40 |
-| Street Breads and Pancakes | 30 |
-| Cold Skin Noodles and Jellies | 27 |
-| Dumplings and Wontons | 22 |
-| Xi'an Specialty Staples | 8 |
-| Traditional Sweet Snacks | 10 |
 
 ## What This Skill Does
 
@@ -67,6 +50,7 @@ After installation, your AI assistant can help you find famous carb-heavy restau
 - whether delivery is available
 - whether Wi-Fi is available
 - the origin, craft, differences, and eating tips for foods like biangbiang noodles, roujiamo, paomo, and youpo noodles
+- and it can also record user-submitted recommendations and comments locally
 
 ### GitHub Repository
 
@@ -164,6 +148,58 @@ If your platform exposes the skill as a slash command, such as OpenClaw or Herme
 - `What is the difference between youpo noodles and saozi noodles?`
 - `Any etiquette or tips for eating paomo?`
 
+#### Community Input
+
+- `I want to recommend a noodle place I really like`
+- `Help me add a good youpo noodle shop near Sajinqiao`
+- `I want to leave a comment on this store`
+- `What do people think about this place?`
+
+In normal use, people do not need to type command arguments for this. They can just describe it naturally, and the assistant should ask only one short follow-up when key details are missing, then save it into the local community data.
+
+### How To Recommend a Store or Leave a Comment
+
+#### Recommending a Store
+
+You can simply say:
+
+- `I want to recommend a noodle place`
+- `I want to add a paomo shop I really like`
+
+If key details are missing, the assistant should usually ask only one short follow-up. The minimum details are normally:
+
+- the store name
+- the area, district, or address
+- why you recommend it
+
+Example:
+
+- You: `I want to recommend a youpo noodle place`
+- AI: `Sure — I can save it. I still need three things: the store name, the area or district, and why you recommend it.`
+- You: `It's called Lao Li Jia, near Sajinqiao, and I think the chili aroma is especially good`
+
+#### Leaving a Comment
+
+You can also say:
+
+- `I want to leave a comment on this store`
+- `I want to add my opinion about this place`
+- `I think this place is better in the morning`
+
+If the conversation is already about a specific store, the assistant should treat that store as the default target. If the target is unclear, it should ask one short follow-up to identify the store.
+
+Ratings and tags are optional. Example:
+
+- You: `I want to leave a comment on this store`
+- AI: `Sure — what would you like to say about it? If you want, you can also add a 1 to 5 rating.`
+- You: `I think it is better in the morning. Give it a 4`
+
+#### Current Storage Scope
+
+- Store suggestions and comments are saved in the current local installed copy by default
+- They are not automatically shared with every user
+- If you want a shared community later, the project needs a remote backend
+
 ### What This Skill Supports
 
 - find Xi'an carbohydrate-focused restaurants
@@ -173,6 +209,9 @@ If your platform exposes the skill as a slash command, such as OpenClaw or Herme
 - check delivery availability
 - check Wi-Fi availability
 - answer selected Xi'an food knowledge questions
+- save local user-submitted store recommendations
+- save local user comments and opinions
+- browse local community feedback
 - reply in Chinese for Chinese queries
 - reply in English for English queries
 
@@ -182,6 +221,8 @@ If your platform exposes the skill as a slash command, such as OpenClaw or Herme
 - It does not support live queue handling
 - If something is not recorded, the assistant should not invent it
 - For nearby questions, it is best to include an area, landmark, street, or location
+- Community submissions and comments are local to the installed copy by default and are not automatically shared with all users
+- Recommendation and comment flows should normally happen through natural language rather than direct low-level commands
 
 ### License
 

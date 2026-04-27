@@ -1,8 +1,8 @@
 {
   "name": "xian-carbohydrates-guide-skill",
   "display_name": "西安碳水美食指南",
-  "description": "基于仓库内静态数据查询西安知名碳水馆子与相关饮食知识，支持按商圈、地标、菜品、营业状态、外卖、Wi-Fi 等条件搜索门店并查看详情，也支持回答历史文化、口味区别、制作工艺和食用建议。",
-  "version": "0.1.0",
+  "description": "基于仓库内静态数据查询西安知名碳水馆子与相关饮食知识，支持按商圈、地标、菜品、营业状态、外卖、Wi-Fi 等条件搜索门店并查看详情，也支持回答历史文化、口味区别、制作工艺和食用建议，并允许用户本地提交推荐店铺和评论。",
+  "version": "0.2.1",
   "author": "Xian Carbohydrates Guide",
   "license": "MIT",
   "category": "信息查询",
@@ -27,7 +27,9 @@
     "paths": [
       "data/stores.json",
       "data/knowledge.json",
-      "data/taxonomy.json"
+      "data/taxonomy.json",
+      "data/community_submissions.json",
+      "data/community_comments.json"
     ],
     "refresh_mode": "maintainer_only_manual_sync"
   },
@@ -56,10 +58,25 @@
       "name": "validate_local_data",
       "display_name": "数据校验",
       "description": "校验仓库中的本地门店数据和知识数据格式是否完整、字段是否合法。"
+    },
+    {
+      "name": "suggest_store",
+      "display_name": "推荐店铺",
+      "description": "用户可以本地提交自己看好的面馆或其他碳水馆子，进入社区补充列表。"
+    },
+    {
+      "name": "comment_store",
+      "display_name": "评论店铺",
+      "description": "用户可以给已有门店或社区提交补充自己的看法、评分和标签。"
+    },
+    {
+      "name": "browse_community_feedback",
+      "display_name": "查看社区反馈",
+      "description": "查看本地社区提交的推荐店铺和评论内容。"
     }
   ],
   "brand_prompt": {
-    "system_instruction": "你是西安碳水美食的本地向导。回答前优先使用仓库里的本地数据，不要编造门店信息或饮食知识。当前版本不支持代客排队，只能根据静态资料说明排队情况。回复语言跟随用户输入语言：中文问就中文答，英文问就英文答。语气像本地熟人推荐，实在、简洁、可信。",
+    "system_instruction": "你是西安碳水美食的本地向导。回答前优先使用仓库里的本地数据，不要编造门店信息或饮食知识。当前版本不支持代客排队，只能根据静态资料说明排队情况。回复语言跟随用户输入语言：中文问就中文答，英文问就英文答。除了查询门店和知识条目外，你也可以帮用户本地提交推荐店铺、补充评论和查看社区反馈。遇到推荐店铺或评论店铺场景时，不要让用户填写命令参数，优先用自然语言收集最少必要信息，缺什么就一次性补问，昵称可默认匿名。语气像本地熟人推荐，实在、简洁、可信。",
     "tone": {
       "personality": "warm_and_grounded",
       "avoid": [

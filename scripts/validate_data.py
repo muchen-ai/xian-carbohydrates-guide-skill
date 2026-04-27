@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 STORE_DATA_PATH = ROOT / "data" / "stores.json"
 KNOWLEDGE_DATA_PATH = ROOT / "data" / "knowledge.json"
 TAXONOMY_DATA_PATH = ROOT / "data" / "taxonomy.json"
+COMMUNITY_SUBMISSIONS_PATH = ROOT / "data" / "community_submissions.json"
+COMMUNITY_COMMENTS_PATH = ROOT / "data" / "community_comments.json"
 REQUIRED_FIELDS = [
     "store_id",
     "brand_name",
@@ -35,6 +37,13 @@ KNOWLEDGE_ENUM_FIELDS = {
     "intent_type": {"history", "craft", "taste", "etiquette"},
     "confidence": {"high", "medium", "low", "unknown"},
 }
+COMMUNITY_SUBMISSION_ENUM_FIELDS = {
+    "status": {"pending", "approved", "rejected"},
+}
+COMMUNITY_COMMENT_ENUM_FIELDS = {
+    "target_type": {"store", "submission"},
+    "status": {"visible", "hidden"},
+}
 TIME_VALUE_RE = re.compile(
     r"^(unknown|closed|([01]\d|2[0-3]):([0-5]\d)-([01]\d|2[0-3]):([0-5]\d)(;([01]\d|2[0-3]):([0-5]\d)-([01]\d|2[0-3]):([0-5]\d))*)$"
 )
@@ -49,6 +58,12 @@ def load_data(path: Path) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             raise ValueError(f"{path.name}[{index}] must be an object")
     return raw
+
+
+def load_optional_data(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    return load_data(path)
 
 
 def load_taxonomy_ids() -> set[str]:
@@ -208,6 +223,126 @@ def validate_knowledge(
     return errors
 
 
+def validate_submission(
+    item: dict[str, Any], seen_ids: set[str], taxonomy_ids: set[str]
+) -> list[str]:
+    errors: list[str] = []
+    submission_id = str(item.get("submission_id", "")).strip()
+    label = submission_id or "<missing-submission-id>"
+
+    required_fields = [
+        "submission_id",
+        "status",
+        "brand_name",
+        "district",
+        "area",
+        "address",
+        "primary_category_id",
+        "dish_types",
+        "submitter_name",
+        "created_at",
+    ]
+    for field in required_fields:
+        value = item.get(field)
+        if value is None:
+            errors.append(f"{label}: missing required field `{field}`")
+            continue
+        if isinstance(value, str) and not value.strip():
+            errors.append(f"{label}: empty required field `{field}`")
+        if isinstance(value, list) and not value:
+            errors.append(f"{label}: empty required list `{field}`")
+
+    if submission_id:
+        if submission_id in seen_ids:
+            errors.append(f"{label}: duplicate submission_id")
+        seen_ids.add(submission_id)
+
+    for field, allowed in COMMUNITY_SUBMISSION_ENUM_FIELDS.items():
+        value = item.get(field)
+        if value is None or value == "":
+            continue
+        normalized = str(value).strip().lower()
+        if normalized not in allowed:
+            errors.append(
+                f"{label}: invalid `{field}` value `{value}`; allowed: {sorted(allowed)}"
+            )
+
+    for list_field in ("dish_types", "dish_types_en"):
+        values = as_list(item.get(list_field))
+        if values and not all(str(value).strip() for value in values):
+            errors.append(f"{label}: `{list_field}` contains empty value")
+
+    primary_category_id = str(item.get("primary_category_id", "")).strip()
+    if primary_category_id and primary_category_id not in taxonomy_ids:
+        errors.append(f"{label}: unknown `primary_category_id` `{primary_category_id}`")
+
+    return errors
+
+
+def validate_comment(
+    item: dict[str, Any],
+    seen_ids: set[str],
+    valid_store_ids: set[str],
+    valid_submission_ids: set[str],
+) -> list[str]:
+    errors: list[str] = []
+    comment_id = str(item.get("comment_id", "")).strip()
+    label = comment_id or "<missing-comment-id>"
+
+    required_fields = [
+        "comment_id",
+        "target_type",
+        "target_id",
+        "status",
+        "author_name",
+        "created_at",
+    ]
+    for field in required_fields:
+        value = item.get(field)
+        if value is None:
+            errors.append(f"{label}: missing required field `{field}`")
+            continue
+        if isinstance(value, str) and not value.strip():
+            errors.append(f"{label}: empty required field `{field}`")
+
+    if comment_id:
+        if comment_id in seen_ids:
+            errors.append(f"{label}: duplicate comment_id")
+        seen_ids.add(comment_id)
+
+    for field, allowed in COMMUNITY_COMMENT_ENUM_FIELDS.items():
+        value = item.get(field)
+        if value is None or value == "":
+            continue
+        normalized = str(value).strip().lower()
+        if normalized not in allowed:
+            errors.append(
+                f"{label}: invalid `{field}` value `{value}`; allowed: {sorted(allowed)}"
+            )
+
+    comment_zh = str(item.get("comment_zh", "")).strip()
+    comment_en = str(item.get("comment_en", "")).strip()
+    if not (comment_zh or comment_en):
+        errors.append(f"{label}: one of `comment_zh` or `comment_en` is required")
+
+    rating = item.get("rating")
+    if rating not in (None, "") and (not isinstance(rating, int) or not 1 <= rating <= 5):
+        errors.append(f"{label}: `rating` must be an integer between 1 and 5")
+
+    tags = as_list(item.get("tags"))
+    if tags and not all(str(value).strip() for value in tags):
+        errors.append(f"{label}: `tags` contains empty value")
+
+    target_type = str(item.get("target_type", "")).strip()
+    target_id = str(item.get("target_id", "")).strip()
+    if target_type == "store" and target_id and target_id not in valid_store_ids:
+        errors.append(f"{label}: unknown store target `{target_id}`")
+    if target_type == "submission" and target_id and target_id not in valid_submission_ids:
+        errors.append(f"{label}: unknown submission target `{target_id}`")
+
+    return errors
+
+
 def main() -> int:
     missing = [
         path for path in (STORE_DATA_PATH, KNOWLEDGE_DATA_PATH, TAXONOMY_DATA_PATH) if not path.exists()
@@ -220,17 +355,27 @@ def main() -> int:
         taxonomy_ids = load_taxonomy_ids()
         stores = load_data(STORE_DATA_PATH)
         knowledge = load_data(KNOWLEDGE_DATA_PATH)
+        submissions = load_optional_data(COMMUNITY_SUBMISSIONS_PATH)
+        comments = load_optional_data(COMMUNITY_COMMENTS_PATH)
     except Exception as exc:
         print(f"Failed to load data: {exc}")
         return 1
 
     seen_store_ids: set[str] = set()
     seen_knowledge_ids: set[str] = set()
+    seen_submission_ids: set[str] = set()
+    seen_comment_ids: set[str] = set()
     errors: list[str] = []
     for store in stores:
         errors.extend(validate_store(store, seen_store_ids, taxonomy_ids))
     for item in knowledge:
         errors.extend(validate_knowledge(item, seen_knowledge_ids, taxonomy_ids))
+    for item in submissions:
+        errors.extend(validate_submission(item, seen_submission_ids, taxonomy_ids))
+    for item in comments:
+        errors.extend(
+            validate_comment(item, seen_comment_ids, seen_store_ids, seen_submission_ids)
+        )
 
     if errors:
         print("Validation failed:")
@@ -238,7 +383,13 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print(f"Validation passed: {len(stores)} store(s), {len(knowledge)} knowledge item(s)")
+    print(
+        "Validation passed: "
+        f"{len(stores)} store(s), "
+        f"{len(knowledge)} knowledge item(s), "
+        f"{len(submissions)} community submission(s), "
+        f"{len(comments)} community comment(s)"
+    )
     return 0
 
 

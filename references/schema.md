@@ -2,11 +2,13 @@
 
 这份文档只描述仓库运行时使用的 JSON 数据结构。
 
-当前 skill 只依赖下面 3 个本地数据文件：
+当前 skill 依赖下面 5 个本地数据文件：
 
 - `data/stores.json`
 - `data/knowledge.json`
 - `data/taxonomy.json`
+- `data/community_submissions.json`
+- `data/community_comments.json`
 
 ## 总原则
 
@@ -229,5 +231,109 @@
   "source_url": "https://example.com",
   "confidence": "medium",
   "priority_score": 10
+}
+```
+
+## community_submissions.json
+
+`data/community_submissions.json` 使用 JSON 数组，每个元素代表一条用户提交的店铺推荐。
+
+这类数据面向“社区补充”，不直接进入主门店库，默认状态建议是 `pending`。
+
+### 主要字段
+
+| JSON 字段 | 必填 | 说明 |
+|---|---|---|
+| `submission_id` | 是 | 稳定唯一 ID |
+| `status` | 是 | `pending/approved/rejected` |
+| `brand_name` | 是 | 店名或品牌名 |
+| `branch_name` | 否 | 分店名 |
+| `district` | 是 | 行政区 |
+| `area` | 是 | 商圈或片区 |
+| `address` | 是 | 详细地址 |
+| `primary_category_id` | 是 | 主分类，取值来自 taxonomy |
+| `dish_types` | 是 | 中文菜式数组 |
+| `dish_types_en` | 否 | 英文菜式数组 |
+| `recommended_reason_zh` | 否 | 中文推荐理由 |
+| `recommended_reason_en` | 否 | 英文推荐理由 |
+| `submitter_name` | 是 | 提交人名字 |
+| `submitter_note_zh` | 否 | 中文补充看法 |
+| `submitter_note_en` | 否 | 英文补充看法 |
+| `source_url` | 否 | 参考链接 |
+| `created_at` | 是 | 创建时间 |
+| `updated_at` | 否 | 更新时间 |
+| `scope` | 否 | 当前建议写 `local_installation` |
+
+### 示例
+
+```json
+{
+  "submission_id": "submission_20260427153000_001",
+  "status": "pending",
+  "brand_name": "老李家",
+  "branch_name": "洒金桥店",
+  "district": "莲湖区",
+  "area": "洒金桥",
+  "address": "某某路 10 号",
+  "primary_category_id": "noodles",
+  "dish_types": ["油泼面"],
+  "dish_types_en": ["youpo noodles"],
+  "recommended_reason_zh": "我觉得这家辣子香味很稳。",
+  "recommended_reason_en": "I think the chili aroma here is especially solid.",
+  "submitter_name": "Muchen",
+  "submitter_note_zh": "建议中午前来，口感更稳定。",
+  "submitter_note_en": "",
+  "source_url": "",
+  "created_at": "2026-04-27T15:30:00",
+  "updated_at": "2026-04-27T15:30:00",
+  "scope": "local_installation"
+}
+```
+
+## community_comments.json
+
+`data/community_comments.json` 使用 JSON 数组，每个元素代表一条用户评论。
+
+评论可以挂在正式门店 `store` 上，也可以挂在社区提交 `submission` 上。
+
+### 主要字段
+
+| JSON 字段 | 必填 | 说明 |
+|---|---|---|
+| `comment_id` | 是 | 稳定唯一 ID |
+| `target_type` | 是 | `store/submission` |
+| `target_id` | 是 | 对应的 `store_id` 或 `submission_id` |
+| `status` | 是 | `visible/hidden` |
+| `author_name` | 是 | 评论人名字 |
+| `comment_zh` | 条件必填 | 中文评论 |
+| `comment_en` | 条件必填 | 英文评论 |
+| `rating` | 否 | 1 到 5 的整数 |
+| `tags` | 否 | 标签数组 |
+| `created_at` | 是 | 创建时间 |
+| `updated_at` | 否 | 更新时间 |
+| `scope` | 否 | 当前建议写 `local_installation` |
+
+说明：
+
+- `comment_zh` 和 `comment_en` 至少要有一个
+- `target_type=store` 时，`target_id` 必须对应已有 `store_id`
+- `target_type=submission` 时，`target_id` 必须对应已有 `submission_id`
+
+### 示例
+
+```json
+{
+  "comment_id": "comment_20260427154000_001",
+  "target_type": "store",
+  "target_id": "fanji_zhonglou",
+  "status": "visible",
+  "author_name": "Muchen",
+  "comment_zh": "我更推荐早上来，馍会更脆一点。",
+  "comment_en": "",
+  "rating": 5,
+  "tags": ["早餐", "本地人常去"],
+  "created_at": "2026-04-27T15:40:00",
+  "updated_at": "2026-04-27T15:40:00",
+  "scope": "local_installation"
 }
 ```

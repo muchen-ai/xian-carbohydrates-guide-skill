@@ -1,7 +1,7 @@
 ---
 name: xian-carbohydrates-guide-skill
-description: 西安碳水美食本地知识库。适用于查询西安肉夹馍、泡馍、biangbiang面、油泼面、甑糕、葫芦头等知名馆子，也适用于回答这些食物的历史文化、口味区别、制作工艺和食用建议。支持按商圈、地标、菜品、是否营业、是否支持外卖、是否有 Wi-Fi 来检索门店，并查看门店详情。回答前优先调用本地查询脚本，不要编造仓库里没有的数据；按用户输入语言回复中文或英文。
-version: 0.1.0
+description: 西安碳水美食本地知识库。适用于查询西安肉夹馍、泡馍、biangbiang面、油泼面、甑糕、葫芦头等知名馆子，也适用于回答这些食物的历史文化、口味区别、制作工艺和食用建议。支持按商圈、地标、菜品、是否营业、是否支持外卖、是否有 Wi-Fi 来检索门店，并查看门店详情；也支持本地提交推荐店铺、评论门店和查看社区反馈。回答前优先调用本地查询脚本，不要编造仓库里没有的数据；按用户输入语言回复中文或英文。
+version: 0.2.0
 alwaysApply: false
 keywords:
   - 西安
@@ -29,6 +29,8 @@ allowed-tools: "Bash(python3:*)"
 - `<skill_dir>/data/stores.json`
 - `<skill_dir>/data/knowledge.json`
 - `<skill_dir>/data/taxonomy.json`
+- `<skill_dir>/data/community_submissions.json`
+- `<skill_dir>/data/community_comments.json`
 
 ## 总原则
 
@@ -41,12 +43,66 @@ allowed-tools: "Bash(python3:*)"
    - 用户主要用中文提问，就回复中文
    - 用户主要用英文提问，就回复英文
    - 英文回答里，店名和菜名优先保留中文原名，必要时补一个简短英文解释
+7. 当前支持“社区补充”能力，但默认只写入当前本地安装副本：
+   - 可以帮用户提交推荐店铺
+   - 可以帮用户给门店补充评论和个人看法
+   - 可以查看本地社区评论
+   - 这不是全网共享社区，除非后面再接入远端服务
+
+## 社区交互规则
+
+当用户想“推荐一家店”或“补充评论”时，不要把底层命令和参数暴露给用户，也不要让用户手工填写 `store_id`、`submission_id`、`author_name` 之类的字段。
+
+### 1. 推荐店铺时的交互方式
+
+- 用户说“我想推荐一家店”时，优先走自然语言补问
+- 只收集最少必要信息：
+  - 店名
+  - 大概在哪个区、商圈或地址
+  - 属于什么类型，或者至少卖什么
+  - 为什么推荐
+- 如果用户一次没说全，用一句话把缺的字段一起问完
+- 不要一项一项连续盘问，尽量把补问控制在 `1` 轮
+- 如果用户没说推荐人名字，默认按匿名处理
+
+推荐补问示例：
+
+- 中文：`可以，我帮你记下来。还差 3 个信息：店名叫什么、在哪个区或商圈、你为什么推荐它？`
+- English: `Sure — I can save it. I still need three things: the store name, the area or district, and why you recommend it.`
+
+### 2. 评论店铺时的交互方式
+
+- 用户说“我想评论这家店”时，先判断当前上下文里是否已经有明确门店
+- 如果刚刚就在聊某家店，默认把这家店当作评论目标，不要再追问 `store_id`
+- 如果目标不明确，只补问一句：`你想评论哪家店？`
+- 评论最少只需要：
+  - 评论内容
+- 评分、标签、昵称都属于可选项
+- 如果用户没说评论人名字，默认按匿名处理
+
+评论补问示例：
+
+- 中文：`可以，你想补充一句什么评价？如果你愿意，也可以顺手给个 1 到 5 分。`
+- English: `Sure — what would you like to say about it? If you want, you can also add a 1 to 5 rating.`
+
+### 3. 写入后的反馈方式
+
+- 写入成功后，要直接告诉用户已经记下来了
+- 同时明确说明：当前推荐和评论默认只保存在本地安装副本里
+- 如果用户期待所有人都能看到，要说明这需要后续接共享后端
+
+成功反馈示例：
+
+- 中文：`已经帮你记下来了。这条推荐目前保存在你当前安装的这个 skill 副本里，后面如果要做成所有用户共享，我们再接远端社区。`
+- English: `Saved. This recommendation currently lives only in your local installed copy of the skill. If you want shared community data later, we can connect a remote backend.`
 
 ## 数据文件
 
 - 门店数据：`<skill_dir>/data/stores.json`
 - 知识数据：`<skill_dir>/data/knowledge.json`
 - 分类词典：`<skill_dir>/data/taxonomy.json`
+- 社区推荐：`<skill_dir>/data/community_submissions.json`
+- 社区评论：`<skill_dir>/data/community_comments.json`
 - 字段规范：`<skill_dir>/references/schema.md`
 - 回答约束：`<skill_dir>/references/response-rules.md`
 
@@ -91,6 +147,43 @@ python3 <skill_dir>/scripts/query.py knowledge-search --intent-type "taste" --qu
 python3 <skill_dir>/scripts/query.py knowledge-detail --entry-id "biangbiang_origin" --format json
 ```
 
+### 5. 提交推荐店铺
+
+```bash
+python3 <skill_dir>/scripts/query.py suggest-store \
+  --brand-name "老李家" \
+  --branch-name "洒金桥店" \
+  --district "莲湖区" \
+  --area "洒金桥" \
+  --address "某某路 10 号" \
+  --category "面类" \
+  --dish "油泼面" \
+  --submitter-name "Muchen" \
+  --reason-zh "辣子香味很稳" \
+  --note-zh "我个人觉得更适合午饭前来" \
+  --format json
+```
+
+### 6. 给店铺补充评论
+
+```bash
+python3 <skill_dir>/scripts/query.py comment-store \
+  --store-id "fanji_zhonglou" \
+  --author-name "Muchen" \
+  --comment-zh "我更推荐早上来，口感更稳" \
+  --rating 5 \
+  --tag "早餐" \
+  --format json
+```
+
+### 7. 查看社区反馈
+
+```bash
+python3 <skill_dir>/scripts/query.py list-comments --store-id "fanji_zhonglou" --format json
+python3 <skill_dir>/scripts/query.py list-suggestions --area "洒金桥" --format json
+python3 <skill_dir>/scripts/query.py detail --store-id "fanji_zhonglou" --include-comments --format json
+```
+
 ## 触发建议
 
 | 用户可能会问 | 建议动作 |
@@ -104,6 +197,9 @@ python3 <skill_dir>/scripts/query.py knowledge-detail --entry-id "biangbiang_ori
 | “biangbiang 面的由来是什么？” | `knowledge-search --query "biangbiang 面 由来"` |
 | “油泼面和臊子面有什么区别？” | `knowledge-search --query "油泼面 臊子面 区别"` |
 | “吃泡馍有什么讲究？” | `knowledge-search --query "泡馍 讲究"` |
+| “我想推荐一家自己喜欢的面馆” | `suggest-store ...` |
+| “我想补充一下我对这家店的看法” | `comment-store ...` |
+| “大家对这家店怎么评价？” | `list-comments --store-id ...` 或 `detail --include-comments` |
 
 ## 回答风格
 
@@ -126,6 +222,12 @@ python3 <skill_dir>/scripts/query.py knowledge-detail --entry-id "biangbiang_ori
 - 没有核验过的最新 Wi-Fi 密码
 - 没有记录的外卖配送范围
 - 知识库里没有记录的典故、做法细节或食用禁忌
+
+对于用户提交和评论，也要明确说明范围：
+
+- 当前社区推荐和评论默认只保存在本地安装副本
+- 它们不会自动同步给其他用户
+- 如果用户期待“所有人都能看到”，需要后续接远端 API、数据库或 issue 流程
 
 如果字段缺失，可以这样回答：
 
