@@ -1,0 +1,144 @@
+[
+  {
+    "entry_id": "biangbiang_origin",
+    "topic_slug": "biangbiang_mian",
+    "intent_type": "history",
+    "category_id": "noodles",
+    "dish_types": [
+      "biangbiang面"
+    ],
+    "dish_types_en": [
+      "biangbiang noodles"
+    ],
+    "question_zh": "biangbiang面的由来是什么？",
+    "question_en": "Where do biangbiang noodles come from?",
+    "answer_zh": "biangbiang面的由来正史无载，主要有两个广为流传的民间传说：1. 秦朝起源说：秦始皇统一六国后，征发关中民夫修筑长城。家人为制作耐储存、顶饱的干粮，将面团反复揉捏抻拉，摔打成宽厚如腰带的面片。煮食时面片撞击锅壁发出\"biang、biang\"之声，因此得名。2. 秀才造字说：一位怀才不遇的秀才在咸阳吃面无钱付账，店家刁难他要写出\"biang\"字。秀才触景生情，创造了这个复杂的汉字，并留下口诀：\"一点飞上天，黄河两边弯；八字大张口，言字往里走；左一扭，右一扭；西一长，东一长，中间加个马大王；心字底，月字旁，留个勾搭挂麻糖；推了车车走咸阳。\"这个字简体42画，繁体57画，是陕西独有的汉字。",
+    "answer_en": "The origin of biangbiang noodles is not recorded in official history, but there are two widely circulated folk legends: 1. Qin Dynasty origin: After Qin Shi Huang unified the six kingdoms, he conscripted laborers from Guanzhong to build the Great Wall. To make durable and filling dry food, family members kneaded and pulled the dough repeatedly into wide, belt-like noodles. When cooked, the noodles hit the pot wall with a \"biang, biang\" sound, hence the name. 2. Scholar character creation: A frustrated scholar couldn't pay for his noodles in Xianyang. The shopkeeper challenged him to write the character \"biang\". Inspired by his situation, the scholar created this complex character and left a mnemonic rhyme. The simplified version has 42 strokes, and the traditional version has 57 strokes, making it a unique character in Shaanxi.",
+    "keywords_zh": [
+      "由来",
+      "历史",
+      "biangbiang",
+      "biangbiang面"
+    ],
+    "keywords_en": [
+      "origin",
+      "history",
+      "biangbiang",
+      "biangbiang noodles"
+    ],
+    "notes": "原始资料置信度 90%；正史无载，以民间传说为主。",
+    "last_verified_at": "2026-04-27",
+    "source_url": "http://www.fufeng.gov.cn/col7368/col7432/202408/t20240808_490771.html, https://baike.sogou.com/m/fullLemma?lid=168074470&g_ut=3",
+    "confidence": "medium",
+    "priority_score": 10
+  },
+  {
+    "entry_id": "roujiamo_craft",
+    "topic_slug": "roujiamo",
+    "intent_type": "craft",
+    "category_id": "mo",
+    "dish_types": [
+      "肉夹馍",
+      "腊汁肉夹馍",
+      "白吉馍"
+    ],
+    "dish_types_en": [
+      "roujiamo",
+      "cured meat roujiamo",
+      "baiji bun"
+    ],
+    "question_zh": "肉夹馍是怎么做的？",
+    "question_en": "How is roujiamo made?",
+    "answer_zh": "正宗西安腊汁肉夹馍分为腊汁肉和白吉馍两部分：1. 腊汁肉制作：选用肥瘦比例3:2的带皮猪前腿肉，切成3厘米见方的大块，用清水浸泡2小时去血水。冰糖炒至深褐色起泡，加入肉块翻炒上色。将八角、桂皮、香叶、花椒、小茴香、丁香等香料用纱布包好，与肉块、生抽、老抽、料酒、盐一同放入砂锅，大火烧开后转小火慢炖4-6小时。正宗老店会使用传承数代的老汤，只加新料不换底汤。2. 白吉馍制作：中筋面粉加温水、酵母和少量食用油揉成光滑面团，发酵至1.5倍大。揉面排气后分成80-100克的小剂子，搓条擀开后卷起，按扁擀成圆饼。放入无油的铁鏊子上，中小火烙至两面出现\"虎背铁圈菊花心\"的纹路，再放入烤炉烤至内部空心。3. 组合：将炖好的腊汁肉肥瘦搭配剁碎，浇一勺滚烫的腊汁，夹入刚出炉的白吉馍中。",
+    "answer_en": "Authentic Xi'an cured meat roujiamo consists of two parts: cured meat and Baiji bun. 1. Cured meat: Select pork foreleg with a fat-to-lean ratio of 3:2, cut into 3cm cubes, soak in water for 2 hours to remove blood. Fry rock sugar until dark brown and bubbly, add meat and stir to color. Wrap star anise, cinnamon, bay leaves, Sichuan pepper, fennel, and cloves in gauze, put into a clay pot with meat, soy sauce, cooking wine, and salt. Bring to a boil then simmer for 4-6 hours. Authentic old shops use generations-old broth, only adding new ingredients without changing the base. 2. Baiji bun: Mix all-purpose flour with warm water, yeast, and a little oil to form a smooth dough, ferment to 1.5 times its size. Divide into 80-100g pieces, roll into strips, curl up, flatten, and roll into round cakes. Bake on an oil-free iron griddle until \"tiger back, iron ring, chrysanthemum heart\" patterns appear, then bake in an oven until hollow inside. 3. Assembly: Chop the cured meat with both fat and lean, pour a spoonful of hot broth, and stuff into the freshly baked Baiji bun.",
+    "keywords_zh": [
+      "做法",
+      "制作工艺",
+      "肉夹馍",
+      "腊汁肉"
+    ],
+    "keywords_en": [
+      "how it's made",
+      "craft",
+      "roujiamo",
+      "cured meat"
+    ],
+    "notes": "原始资料置信度 95%；以西安腊汁肉夹馍的常见做法为主。",
+    "last_verified_at": "2026-04-27",
+    "source_url": "https://paper.people.com.cn/rmrbhwb/pc/content/202501/02/content_30049319.html, https://m.baike.com/wiki/%E9%99%95%E8%A5%BF%E8%85%8A%E6%B1%81%E8%82%89%E5%A4%B9%E9%A6%8D/1087431",
+    "confidence": "high",
+    "priority_score": 9
+  },
+  {
+    "entry_id": "youpomian_vs_saozimian",
+    "topic_slug": "noodle_comparison",
+    "intent_type": "taste",
+    "category_id": "noodles",
+    "dish_types": [
+      "油泼面",
+      "臊子面"
+    ],
+    "dish_types_en": [
+      "youpo noodles",
+      "saozi noodles"
+    ],
+    "question_zh": "油泼面和臊子面有什么区别？",
+    "question_en": "What is the difference between youpo noodles and saozi noodles?",
+    "answer_zh": "两者都是陕西经典面食，主要区别如下：1. 面条形态：油泼面用宽约2-3厘米的\"裤带面\"，宽厚有嚼劲，能更好地裹住调料；臊子面用细圆面，吸汤性强，适合搭配浓郁的汤头。2. 调味方式：油泼面没有复杂的汤底，将煮好的面条捞出，撒上辣椒面、蒜末、葱花，用滚烫的热油一泼，激发香味，再加入酱油、醋、盐等调味；臊子面以汤为主，讲究\"煎稀汪\"（烫嘴、宽汤、油厚），用猪肉、胡萝卜、木耳、黄花菜、豆腐等炒制的臊子浇在面上，突出酸辣鲜香。3. 历史背景：臊子面源自周代，有3000多年历史，是陕西传统宴席和红白喜事的必备美食，承载着周礼文化；油泼面历史较短，是近代关中民间发展起来的家常面食。4. 食用场景：臊子面适合正式场合和秋冬暖身；油泼面制作快捷，适合日常快餐。",
+    "answer_en": "Both are classic Shaanxi noodles, with the following main differences: 1. Noodle shape: Youpo noodles use 2-3cm wide \"belt noodles\", thick and chewy, which can better wrap the seasonings; Saozi noodles use thin round noodles, which are highly absorbent and suitable for rich soup. 2. Seasoning method: Youpo noodles have no complex soup base. After cooking, sprinkle chili powder, minced garlic, and green onions, pour hot oil to release the aroma, then add soy sauce, vinegar, and salt. Saozi noodles are soup-based, emphasizing \"hot, thin, and rich\" (scalding hot, plenty of soup, thick oil). It is topped with saozi made from pork, carrots, fungus, daylilies, and tofu, highlighting sour, spicy, and fresh flavors. 3. Historical background: Saozi noodles originated in the Zhou Dynasty, with a history of over 3000 years. They are essential for traditional banquets and weddings in Shaanxi, carrying Zhou ritual culture. Youpo noodles have a shorter history and developed as a home-style noodle in modern Guanzhong. 4. Eating scenarios: Saozi noodles are suitable for formal occasions and warming up in autumn and winter; Youpo noodles are quick to make and suitable for daily fast food.",
+    "keywords_zh": [
+      "区别",
+      "口味",
+      "油泼面",
+      "臊子面"
+    ],
+    "keywords_en": [
+      "difference",
+      "flavor",
+      "youpo noodles",
+      "saozi noodles"
+    ],
+    "notes": "原始资料置信度 95%；重点是面条形态、调味方式和食用场景的差异。",
+    "last_verified_at": "2026-04-27",
+    "source_url": "https://k.sina.cn/article_1720962692_6693ce84020030ypo.html, https://post.m.smzdm.com/p/113494018/",
+    "confidence": "high",
+    "priority_score": 10
+  },
+  {
+    "entry_id": "paomo_etiquette",
+    "topic_slug": "yangrou_paomo",
+    "intent_type": "etiquette",
+    "category_id": "mo",
+    "dish_types": [
+      "泡馍",
+      "羊肉泡馍",
+      "牛羊肉泡馍"
+    ],
+    "dish_types_en": [
+      "paomo",
+      "yangrou paomo",
+      "beef and lamb paomo"
+    ],
+    "question_zh": "吃泡馍有什么讲究？",
+    "question_en": "Any etiquette or tips for eating paomo?",
+    "answer_zh": "吃西安牛羊肉泡馍有一套完整的仪式感：1. 掰馍：这是最关键的步骤。先将圆馍一分为二，再二分为四，然后用指甲将每块馍掐成黄豆粒大小（约0.5cm³）。掰得越碎越均匀，馍越能吸收汤汁。避免撕成条状或大块，否则外软内硬。2. 煮馍分类：根据汤量分为三种：- 干泡：汤汁完全渗入馍内，碗内无汤，馍筋道有韧性；- 口汤：汤较少，吃完后碗底刚好剩一口汤；- 水围城：多汤，馍和肉在碗中心，四周围着一圈汤，适合冬季食用。3. 食用方法：讲究\"蚕食\"，从碗的一侧开始吃，不要用筷子来回搅拌，以免汤馍分离，鲜味流失。吃到一半感到腻时，可以吃一颗糖蒜解腻，或加一点自制羊油辣子。4. 搭配：经典搭配是\"泡馍+糖蒜+冰峰汽水\"。吃完后可以喝一碗用原汤加粉丝烩制的高汤清口，称为\"原汤化原食\"。",
+    "answer_en": "Eating Xi'an beef and lamb paomo has a complete ritual: 1. Breaking the bun: This is the most critical step. First cut the round bun in half, then into quarters, then pinch each piece into soybean-sized crumbs (about 0.5cm³). The finer and more uniform the crumbs, the better the bun absorbs the soup. Avoid tearing into strips or large pieces, which will be soft outside and hard inside. 2. Cooking styles: Classified by soup amount: - Dry paomo: Soup completely absorbed into the bun, no soup left in the bowl, chewy and resilient; - Mouthful of soup: Less soup, just enough for one mouthful left at the bottom; - Water surrounding the city: Plenty of soup, bun and meat in the center, surrounded by soup, suitable for winter. 3. Eating method: \"Nibble like a silkworm\", start from one side of the bowl, do not stir back and forth with chopsticks to avoid separating soup and bun and losing freshness. When feeling greasy halfway, eat a pickled garlic or add some homemade lamb oil chili. 4. Pairing: Classic pairing is \"paomo + pickled garlic + Bingfeng soda\". After eating, you can drink a bowl of broth made from the original soup with vermicelli to cleanse the palate, called \"original soup digests original food\".",
+    "keywords_zh": [
+      "讲究",
+      "吃法",
+      "泡馍",
+      "掰馍"
+    ],
+    "keywords_en": [
+      "tips",
+      "etiquette",
+      "paomo",
+      "breaking the bun"
+    ],
+    "notes": "原始资料置信度 95%；内容偏传统吃法和仪式感。",
+    "last_verified_at": "2026-04-27",
+    "source_url": "http://www.sn.xinhuanet.com/zt201709mon/qft/fangtan.htm, https://m.baike.com/wiki/%E6%B3%A1%E9%A6%8D/1064272",
+    "confidence": "high",
+    "priority_score": 9
+  }
+]
